@@ -1,0 +1,769 @@
+<!DOCTYPE html><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudGuard | AWS Budget Tracker</title>
+<style>
+:root {
+  --bg:#0b1120;
+  --panel:#111c30;
+  --panel2:#16243b;
+  --border:#253650;
+  --text:#e8eef8;
+  --muted:#91a2bb;
+  --orange:#ff9900;
+  --blue:#4da3ff;
+  --green:#2dcc91;
+  --red:#ff6577;
+  --yellow:#f5c451;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Inter,Segoe UI,Arial,sans-serif;
+}
+button,input,select { font:inherit; }
+button { cursor:pointer; }
+.app { display:flex; min-height:100vh; }
+.sidebar {
+  width:245px;
+  background:#0d1729;
+  border-right:1px solid var(--border);
+  padding:25px 17px;
+  display:flex;
+  flex-direction:column;
+  flex-shrink:0;
+}
+.brand { display:flex; align-items:center; gap:11px; padding:0 8px 30px; }
+.brand-icon {
+  width:39px;height:39px;border-radius:12px;
+  display:grid;place-items:center;
+  background:linear-gradient(135deg,#ffb43c,#f07800);
+  color:#172033;font-size:21px;font-weight:900;
+}
+.brand h2 { margin:0;font-size:17px;letter-spacing:.3px; }
+.brand small { display:block;color:var(--muted);font-size:10px;margin-top:4px;letter-spacing:1.4px; }
+.nav-label { color:#637590;font-size:10px;font-weight:700;letter-spacing:1.5px;padding:12px 10px; }
+.nav-item {
+  width:100%;border:0;background:transparent;color:#a8b7cb;
+  padding:12px 13px;text-align:left;border-radius:9px;
+  margin-bottom:5px;font-size:13px;display:flex;gap:12px;align-items:center;
+}
+.nav-item:hover,.nav-item.active { background:#1b2b43;color:#fff; }
+.nav-item.active { box-shadow:inset 3px 0 var(--orange); }
+.nav-icon { width:18px;text-align:center;font-size:16px; }
+.sidebar-bottom { margin-top:auto;padding:15px 10px 0;border-top:1px solid var(--border); }
+.status { display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11px; }
+.dot { width:7px;height:7px;border-radius:50%;background:var(--green); }
+.sidebar-bottom p { color:#657792;font-size:10px;line-height:1.6;margin-top:12px; }
+.main { flex:1;min-width:0;padding:29px 34px 40px;max-width:1600px;margin:0 auto;width:100%; }
+.topbar { display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:27px; }
+.eyebrow { color:var(--orange);font-size:10px;letter-spacing:1.8px;font-weight:800;margin-bottom:7px; }
+h1 { font-size:25px;margin:0;font-weight:750;letter-spacing:-.6px; }
+.subtitle { color:var(--muted);font-size:12px;margin-top:7px; }
+.top-actions { display:flex;align-items:center;gap:10px;flex-wrap:wrap; }
+select,input {
+  background:#0c1729;border:1px solid var(--border);
+  color:var(--text);border-radius:8px;padding:10px 12px;outline:none;
+}
+select:focus,input:focus { border-color:var(--orange); }
+.month-select { min-width:155px; }
+.btn {
+  border:1px solid var(--border);border-radius:8px;padding:10px 14px;
+  background:#17253b;color:var(--text);font-size:12px;font-weight:650;
+}
+.btn:hover { filter:brightness(1.2); }
+.btn-primary { background:var(--orange);border-color:var(--orange);color:#172033; }
+.btn-danger { color:var(--red); }
+.grid { display:grid;gap:16px; }
+.cards { grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:18px; }
+.card,.panel {
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:13px;padding:19px;
+}
+.card-top { display:flex;justify-content:space-between;align-items:center;gap:8px; }
+.card-label { color:var(--muted);font-size:11px;font-weight:650; }
+.card-icon {
+  width:32px;height:32px;border-radius:9px;display:grid;place-items:center;
+  background:#20314a;font-size:16px;
+}
+.card-value { font-size:25px;font-weight:760;margin:17px 0 7px;letter-spacing:-.6px; }
+.card-foot { color:var(--muted);font-size:10px; }
+.accent-orange { color:var(--orange); }
+.accent-green { color:var(--green); }
+.accent-blue { color:var(--blue); }
+.accent-red { color:var(--red); }
+.middle { grid-template-columns:1.55fr 1fr;margin-bottom:18px; }
+.panel-heading { display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:19px; }
+.panel-heading h3 { font-size:14px;margin:0;font-weight:700; }
+.panel-heading p { color:var(--muted);font-size:10px;margin:5px 0 0; }
+.badge {
+  padding:5px 8px;border-radius:6px;background:#20314a;
+  color:#a9bed8;font-size:10px;white-space:nowrap;
+}
+.progress-wrap { margin:17px 0 13px; }
+.progress-track { background:#25364e;height:10px;border-radius:20px;overflow:hidden; }
+.progress-fill { height:100%;border-radius:20px;transition:width .3s; }
+.progress-meta { display:flex;justify-content:space-between;color:var(--muted);font-size:10px;margin-top:9px; }
+.budget-numbers { display:flex;justify-content:space-between;gap:10px;margin-top:23px; }
+.budget-numbers strong { display:block;font-size:16px;margin-top:6px; }
+.budget-numbers span { color:var(--muted);font-size:10px; }
+.alert-box { border-radius:9px;padding:11px 13px;margin-top:17px;font-size:11px;line-height:1.5; }
+.alert-safe { background:#12362f;color:#7ee4bf;border:1px solid #1e5a49; }
+.alert-warn { background:#3c3017;color:#f4d27c;border:1px solid #66501e; }
+.alert-danger { background:#401f2a;color:#ff9baa;border:1px solid #713344; }
+.chart { width:100%;height:205px;display:block;overflow:visible; }
+.chart text { fill:#8295b0;font-size:10px; }
+.chart .gridline { stroke:#263850;stroke-width:1; }
+.chart .bar { fill:#ff9900;opacity:.85; }
+.chart .bar:hover { opacity:1; }
+.lower { grid-template-columns:1fr 1fr;margin-bottom:18px; }
+.service-list { display:flex;flex-direction:column;gap:15px; }
+.service-row { display:grid;grid-template-columns:105px 1fr 75px;gap:10px;align-items:center; }
+.service-name { font-size:11px;color:#c7d3e4;overflow:hidden;text-overflow:ellipsis; }
+.service-track { height:7px;background:#25364e;border-radius:10px;overflow:hidden; }
+.service-fill { height:100%;background:var(--blue);border-radius:10px; }
+.service-amount { font-size:11px;text-align:right;color:#d9e4f3; }
+.table-panel { padding:0;overflow:hidden; }
+.table-head { padding:19px;display:flex;justify-content:space-between;align-items:center;gap:12px; }
+.table-head h3 { font-size:14px;margin:0; }
+.table-wrap { overflow-x:auto; }
+table { border-collapse:collapse;width:100%;min-width:650px; }
+th { background:#152239;color:#8395af;text-align:left;font-size:10px;letter-spacing:.8px;text-transform:uppercase;padding:12px 18px; }
+td { border-top:1px solid #22334a;padding:13px 18px;font-size:11px;color:#cbd7e7; }
+tr:hover td { background:#142137; }
+.service-pill { background:#20314a;padding:5px 8px;border-radius:5px;font-size:10px; }
+.amount { font-weight:700;color:#fff; }
+.actions { display:flex;gap:6px; }
+.action-btn { background:transparent;border:1px solid var(--border);color:#b8c7d9;border-radius:6px;padding:5px 8px;font-size:10px; }
+.action-btn:hover { border-color:var(--orange);color:var(--orange); }
+.empty { text-align:center;padding:36px;color:var(--muted);font-size:12px; }
+.footer { color:#657792;text-align:center;font-size:10px;padding:24px 0 0; }
+.modal-backdrop {
+  position:fixed;inset:0;background:#030813cc;display:none;
+  align-items:center;justify-content:center;padding:15px;z-index:5;
+}
+.modal-backdrop.show { display:flex; }
+.modal { width:100%;max-width:510px;background:#111c30;border:1px solid var(--border);border-radius:14px;padding:23px;max-height:92vh;overflow-y:auto; }
+.modal h2 { font-size:18px;margin:0 0 5px; }
+.modal-sub { color:var(--muted);font-size:11px;margin-bottom:20px; }
+.form-grid { display:grid;grid-template-columns:1fr 1fr;gap:13px; }
+.field { display:flex;flex-direction:column;gap:7px; }
+.field.full { grid-column:1/-1; }
+.field label { font-size:11px;color:#aabbd0; }
+.field input,.field select { width:100%;font-size:12px; }
+.modal-actions { display:flex;justify-content:flex-end;gap:9px;margin-top:21px; }
+.toast {
+  position:fixed;right:22px;bottom:22px;background:#1b3048;border:1px solid #38516f;
+  border-radius:9px;padding:12px 16px;color:#eaf2ff;font-size:12px;
+  opacity:0;transform:translateY(10px);transition:.2s;pointer-events:none;z-index:10;
+}
+.toast.show { opacity:1;transform:translateY(0); }
+.mobile-menu { display:none; }
+@media(max-width:1050px) {
+  .cards { grid-template-columns:repeat(2,1fr); }
+  .middle,.lower { grid-template-columns:1fr; }
+}
+@media(max-width:700px) {
+  .sidebar { display:none; }
+  .main { padding:20px 14px; }
+  .topbar { align-items:flex-start;flex-direction:column; }
+  .top-actions { width:100%; }
+  .month-select { flex:1; }
+  h1 { font-size:22px; }
+  .cards { gap:10px; }
+  .card { padding:14px; }
+  .card-value { font-size:20px; }
+  .form-grid { grid-template-columns:1fr; }
+  .field.full { grid-column:auto; }
+  .budget-numbers strong { font-size:13px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">C</div>
+      <div><h2>CloudGuard</h2><small>AWS COST CONTROL</small></div>
+    </div>
+    <div class="nav-label">WORKSPACE</div>
+    <button class="nav-item active" data-target="dashboard"><span class="nav-icon">▦</span>Dashboard</button>
+    <button class="nav-item" data-target="expenses"><span class="nav-icon">▤</span>Expenses</button>
+    <button class="nav-item" data-target="analytics"><span class="nav-icon">▥</span>Analytics</button>
+    <div class="nav-label" style="margin-top:20px">MANAGEMENT</div>
+    <button class="nav-item" id="budgetNav"><span class="nav-icon">◎</span>Budget Settings</button>
+    <button class="nav-item" id="exportNav"><span class="nav-icon">⇩</span>Export Report</button>
+    <div class="sidebar-bottom">
+      <div class="status"><span class="dot"></span> Local storage active</div>
+      <p>Your entries are saved in this browser. This application does not connect to an AWS account.</p>
+    </div>
+  </aside>  <main class="main">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">CLOUD FINANCIAL OPERATIONS</div>
+        <h1>AWS Budget Overview</h1>
+        <div class="subtitle">Monitor your cloud expenses and stay within your monthly budget.</div>
+      </div>
+      <div class="top-actions">
+        <select id="monthFilter" class="month-select" aria-label="Select month"></select>
+        <button class="btn" id="exportBtn">↓ Export CSV</button>
+        <button class="btn btn-primary" id="addBtn">＋ Add Expense</button>
+      </div>
+    </header><section id="dashboard">
+  <div class="grid cards">
+    <div class="card">
+      <div class="card-top"><span class="card-label">MONTHLY BUDGET</span><span class="card-icon">◎</span></div>
+      <div class="card-value accent-orange" id="budgetValue">₹0.00</div>
+      <div class="card-foot">Your configured spending limit</div>
+    </div>
+    <div class="card">
+      <div class="card-top"><span class="card-label">TOTAL SPENDING</span><span class="card-icon">↗</span></div>
+      <div class="card-value" id="spentValue">₹0.00</div>
+      <div class="card-foot">Recorded expenses this month</div>
+    </div>
+    <div class="card">
+      <div class="card-top"><span class="card-label">REMAINING BUDGET</span><span class="card-icon">◈</span></div>
+      <div class="card-value accent-green" id="remainingValue">₹0.00</div>
+      <div class="card-foot">Budget minus recorded spending</div>
+    </div>
+    <div class="card">
+      <div class="card-top"><span class="card-label">BUDGET UTILIZATION</span><span class="card-icon">▥</span></div>
+      <div class="card-value accent-blue" id="utilizationValue">0%</div>
+      <div class="card-foot">Percentage of budget consumed</div>
+    </div>
+  </div>
+
+  <div class="grid middle">
+    <div class="panel">
+      <div class="panel-heading">
+        <div><h3>Budget Utilization</h3><p>Monthly spending against your configured limit</p></div>
+        <span class="badge" id="budgetBadge">ON TRACK</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:end;gap:10px">
+        <div><div style="font-size:27px;font-weight:750" id="utilizationBig">0%</div><div style="font-size:10px;color:var(--muted)">of monthly budget used</div></div>
+        <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Monthly limit</div><strong id="budgetSmall">₹0.00</strong></div>
+      </div>
+      <div class="progress-wrap"><div class="progress-track"><div class="progress-fill" id="budgetProgress" style="width:0%;background:var(--green)"></div></div>
+      <div class="progress-meta"><span>₹0 spent</span><span id="budgetTotalLabel">₹0 budget</span></div></div>
+      <div id="budgetAlert" class="alert-box alert-safe">You're within your configured budget.</div>
+      <div class="budget-numbers">
+        <div><span>SPENT</span><strong id="budgetSpentBottom">₹0</strong></div>
+        <div><span>AVAILABLE</span><strong class="accent-green" id="budgetRemainingBottom">₹0</strong></div>
+        <div><span>ENTRIES</span><strong id="entryCount">0</strong></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-heading"><div><h3>Spending Trend</h3><p>Daily recorded expenses for selected month</p></div><span class="badge">DAILY</span></div>
+      <svg id="trendChart" class="chart" viewBox="0 0 500 210" role="img" aria-label="Daily spending chart"></svg>
+    </div>
+  </div>
+
+  <div class="grid lower">
+    <div class="panel">
+      <div class="panel-heading"><div><h3>Service Cost Breakdown</h3><p>Recorded costs grouped by AWS service</p></div><span class="badge">BY SERVICE</span></div>
+      <div id="serviceBreakdown" class="service-list"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-heading"><div><h3>Budget Configuration</h3><p>Set your spending limit and alert threshold</p></div></div>
+      <div class="field" style="margin-bottom:14px">
+        <label for="quickBudget">Monthly budget</label>
+        <input type="number" id="quickBudget" min="0" step="0.01" placeholder="Enter budget amount">
+      </div>
+      <div class="field" style="margin-bottom:14px">
+        <label for="currency">Currency</label>
+        <select id="currency"><option value="INR">INR — Indian Rupee (₹)</option><option value="USD">USD — US Dollar ($)</option><option value="EUR">EUR — Euro (€)</option><option value="GBP">GBP — British Pound (£)</option></select>
+      </div>
+      <div class="field">
+        <label for="threshold">Warning threshold</label>
+        <select id="threshold"><option value="50">50% of budget</option><option value="60">60% of budget</option><option value="70">70% of budget</option><option value="75">75% of budget</option><option value="80">80% of budget</option><option value="90">90% of budget</option></select>
+      </div>
+      <button class="btn btn-primary" id="saveSettings" style="margin-top:17px;width:100%">Save Budget Settings</button>
+    </div>
+  </div>
+</section>
+
+<section id="expenses" style="margin-top:20px">
+  <div class="panel table-panel">
+    <div class="table-head">
+      <div><h3>Expense Records</h3><div class="subtitle">Manage your recorded cloud service expenses.</div></div>
+      <button class="btn btn-primary" id="addBtn2">＋ New Record</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Service</th><th>Category</th><th>Description</th><th>Amount</th><th>Actions</th></tr></thead>
+        <tbody id="expenseTable"></tbody>
+      </table>
+      <div class="empty" id="emptyMessage">No expenses recorded for this month. Add your first expense to get started.</div>
+    </div>
+  </div>
+</section>
+
+<section id="analytics" style="margin-top:20px">
+  <div class="panel">
+    <div class="panel-heading"><div><h3>Expense Summary</h3><p>Breakdown of recorded expenses for the selected month</p></div></div>
+    <div id="analyticsSummary" style="color:var(--muted);font-size:12px;line-height:2"></div>
+  </div>
+</section>
+<div class="footer">CLOUDGUARD · AWS BUDGET TRACKER · LOCAL BROWSER APPLICATION<br>Independent educational project — not an official AWS product.</div>
+
+  </main>
+</div><div class="modal-backdrop" id="expenseModal">
+  <div class="modal">
+    <h2 id="modalTitle">Add Expense</h2>
+    <div class="modal-sub">Enter the details of your cloud service expense.</div>
+    <form id="expenseForm">
+      <input type="hidden" id="editId">
+      <div class="form-grid">
+        <div class="field"><label for="expenseDate">Expense date *</label><input type="date" id="expenseDate" required></div>
+        <div class="field"><label for="expenseAmount">Amount *</label><input type="number" id="expenseAmount" min="0.01" step="0.01" placeholder="0.00" required></div>
+        <div class="field"><label for="expenseService">AWS service *</label>
+          <select id="expenseService" required>
+            <option value="Amazon EC2">Amazon EC2</option><option value="Amazon S3">Amazon S3</option>
+            <option value="AWS Lambda">AWS Lambda</option><option value="Amazon RDS">Amazon RDS</option>
+            <option value="Amazon CloudFront">Amazon CloudFront</option><option value="Amazon VPC">Amazon VPC</option>
+            <option value="Amazon CloudWatch">Amazon CloudWatch</option><option value="AWS IAM">AWS IAM</option>
+            <option value="Amazon DynamoDB">Amazon DynamoDB</option><option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="field"><label for="expenseCategory">Category</label>
+          <select id="expenseCategory"><option>Compute</option><option>Storage</option><option>Database</option><option>Networking</option><option>Monitoring</option><option>Security</option><option>Other</option></select>
+        </div>
+        <div class="field full"><label for="expenseDescription">Description / Notes</label><input type="text" id="expenseDescription" maxlength="120" placeholder="e.g. EC2 test instance usage"></div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="cancelModal">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="submitExpense">Save Expense</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div><script>
+(() => {
+  "use strict";
+
+  const STORAGE_KEY = "cloudguard_budget_tracker_v1";
+  const defaults = {
+    budget: 10000,
+    currency: "INR",
+    threshold: 75,
+    expenses: []
+  };
+
+  let state = loadState();
+  let selectedMonth = currentMonth();
+  const $ = id => document.getElementById(id);
+
+  function loadState() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (!saved || typeof saved !== "object") return structuredClone(defaults);
+      return {
+        budget: validNumber(saved.budget) ? saved.budget : defaults.budget,
+        currency: ["INR","USD","EUR","GBP"].includes(saved.currency) ? saved.currency : "INR",
+        threshold: [50,60,70,75,80,90].includes(Number(saved.threshold)) ? Number(saved.threshold) : 75,
+        expenses: Array.isArray(saved.expenses) ? saved.expenses.filter(validExpense) : []
+      };
+    } catch {
+      return structuredClone(defaults);
+    }
+  }
+
+  function validNumber(n) {
+    return typeof n === "number" && Number.isFinite(n) && n >= 0;
+  }
+
+  function validExpense(e) {
+    return e && typeof e.id === "string" &&
+      typeof e.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(e.date) &&
+      typeof e.service === "string" && typeof e.category === "string" &&
+      validNumber(e.amount) && e.amount > 0;
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      notify("Unable to save data. Check your browser storage settings.");
+    }
+  }
+
+  function currentMonth() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+  }
+
+  function money(value) {
+    return new Intl.NumberFormat("en-IN", {
+      style:"currency", currency:state.currency, maximumFractionDigits:2
+    }).format(value);
+  }
+
+  function monthExpenses() {
+    return state.expenses.filter(e => e.date.startsWith(selectedMonth))
+      .sort((a,b) => b.date.localeCompare(a.date));
+  }
+
+  function monthTotal() {
+    return monthExpenses().reduce((sum,e) => sum + e.amount, 0);
+  }
+
+  function safeText(value) {
+    return String(value ?? "");
+  }
+
+  function notify(message) {
+    const toast = $("toast");
+    toast.textContent = message;
+    toast.classList.add("show");
+    clearTimeout(notify.timer);
+    notify.timer = setTimeout(() => toast.classList.remove("show"), 2600);
+  }
+
+  function renderMonthOptions() {
+    const select = $("monthFilter");
+    const months = new Set([currentMonth(), ...state.expenses.map(e => e.date.slice(0,7))]);
+    const sorted = [...months].sort().reverse();
+    select.replaceChildren();
+    sorted.forEach(m => {
+      const option = document.createElement("option");
+      option.value = m;
+      option.textContent = new Date(m+"-01T12:00:00").toLocaleDateString("en-IN",{month:"long",year:"numeric"});
+      select.append(option);
+    });
+    if (!months.has(selectedMonth)) {
+      const option = document.createElement("option");
+      option.value = selectedMonth;
+      option.textContent = selectedMonth;
+      select.append(option);
+    }
+    select.value = selectedMonth;
+  }
+
+  function renderDashboard() {
+    const expenses = monthExpenses();
+    const spent = expenses.reduce((s,e) => s+e.amount,0);
+    const budget = state.budget;
+    const remaining = budget-spent;
+    const percent = budget > 0 ? spent/budget*100 : (spent > 0 ? 100 : 0);
+    const visualPercent = Math.min(percent,100);
+
+    $("budgetValue").textContent = money(budget);
+    $("spentValue").textContent = money(spent);
+    $("remainingValue").textContent = money(remaining);
+    $("remainingValue").className = "card-value " + (remaining < 0 ? "accent-red" : "accent-green");
+    $("utilizationValue").textContent = percent.toFixed(1)+"%";
+    $("utilizationBig").textContent = percent.toFixed(1)+"%";
+    $("budgetSmall").textContent = money(budget);
+    $("budgetSpentBottom").textContent = money(spent);
+    $("budgetRemainingBottom").textContent = money(remaining);
+    $("entryCount").textContent = expenses.length;
+    $("budgetTotalLabel").textContent = money(budget);
+    $("budgetProgress").style.width = visualPercent+"%";
+    $("budgetProgress").style.background = percent >= 100 ? "var(--red)" : percent >= state.threshold ? "var(--yellow)" : "var(--green)";
+    $("budgetProgress").parentElement.nextElementSibling.firstElementChild.textContent = money(spent)+" spent";
+
+    const badge = $("budgetBadge");
+    const alert = $("budgetAlert");
+    if (budget <= 0 && spent > 0) {
+      badge.textContent = "NO BUDGET";
+      alert.className = "alert-box alert-warn";
+      alert.textContent = "You have recorded expenses but your monthly budget is set to zero. Configure a budget to track utilization.";
+    } else if (percent >= 100) {
+      badge.textContent = "OVER BUDGET";
+      alert.className = "alert-box alert-danger";
+      alert.textContent = "Budget exceeded by "+money(spent-budget)+". Review your recorded expenses and spending plan.";
+    } else if (percent >= state.threshold) {
+      badge.textContent = "WARNING";
+      alert.className = "alert-box alert-warn";
+      alert.textContent = "You have used "+percent.toFixed(1)+"% of your budget. Your configured warning threshold is "+state.threshold+"%.";
+    } else {
+      badge.textContent = "ON TRACK";
+      alert.className = "alert-box alert-safe";
+      alert.textContent = "You're within your configured budget. Keep monitoring your expenses.";
+    }
+
+    $("quickBudget").value = budget;
+    $("currency").value = state.currency;
+    $("threshold").value = String(state.threshold);
+    renderServices(expenses);
+    renderTrend(expenses);
+    renderTable(expenses);
+    renderAnalytics(expenses,spent,percent);
+  }
+
+  function renderServices(expenses) {
+    const totals = {};
+    expenses.forEach(e => totals[e.service] = (totals[e.service]||0)+e.amount);
+    const entries = Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+    const container = $("serviceBreakdown");
+    container.replaceChildren();
+    if (!entries.length) {
+      const p = document.createElement("div");
+      p.className = "empty";
+      p.textContent = "Add expenses to see service costs.";
+      container.append(p);
+      return;
+    }
+    const max = Math.max(...entries.map(e=>e[1]),1);
+    entries.slice(0,7).forEach(([name,value]) => {
+      const row = document.createElement("div");
+      row.className = "service-row";
+      const label = document.createElement("div");
+      label.className = "service-name";
+      label.textContent = name;
+      const track = document.createElement("div");
+      track.className = "service-track";
+      const fill = document.createElement("div");
+      fill.className = "service-fill";
+      fill.style.width = (value/max*100)+"%";
+      track.append(fill);
+      const amount = document.createElement("div");
+      amount.className = "service-amount";
+      amount.textContent = money(value);
+      row.append(label,track,amount);
+      container.append(row);
+    });
+  }
+
+  function renderTrend(expenses) {
+    const svg = $("trendChart");
+    svg.replaceChildren();
+    const ns = "http://www.w3.org/2000/svg";
+    const make = (tag,attrs,text) => {
+      const el = document.createElementNS(ns,tag);
+      Object.entries(attrs||{}).forEach(([k,v])=>el.setAttribute(k,v));
+      if (text !== undefined) el.textContent = text;
+      svg.append(el);
+      return el;
+    };
+    const [year,month] = selectedMonth.split("-").map(Number);
+    const days = new Date(year,month,0).getDate();
+    const values = Array(days).fill(0);
+    expenses.forEach(e => values[Number(e.date.slice(8,10))-1] += e.amount);
+    const max = Math.max(...values,1);
+    const left=39,right=490,top=15,bottom=174;
+    for (let i=0;i<=4;i++) {
+      const y=top+(bottom-top)*i/4;
+      make("line",{x1:left,y1:y,x2:right,y2:y,class:"gridline"});
+      make("text",{x:3,y:y+3},money(max*(4-i)/4));
+    }
+    const step=(right-left)/days;
+    values.forEach((v,i) => {
+      const height=(v/max)*(bottom-top);
+      const barW=Math.max(2,step*.62);
+      const x=left+i*step+(step-barW)/2;
+      const y=bottom-height;
+      const rect=make("rect",{x,y,width:barW,height:Math.max(1,height),rx:2,class:"bar"});
+      const title=document.createElementNS(ns,"title");
+      title.textContent=`Day ${i+1}: ${money(v)}`;
+      rect.append(title);
+    });
+    [1,Math.ceil(days/4),Math.ceil(days/2),Math.ceil(days*3/4),days].forEach(d=>{
+      const x=left+(d-.5)*step;
+      make("text",{x,y:194,"text-anchor":"middle"},String(d));
+    });
+  }
+
+  function renderTable(expenses) {
+    const tbody = $("expenseTable");
+    tbody.replaceChildren();
+    $("emptyMessage").style.display = expenses.length ? "none" : "block";
+    expenses.forEach(e => {
+      const tr = document.createElement("tr");
+      const values = [
+        new Date(e.date+"T12:00:00").toLocaleDateString("en-IN"),
+        e.service,e.category,e.description || "—",money(e.amount)
+      ];
+      values.forEach((value,i) => {
+        const td=document.createElement("td");
+        if (i===1 || i===2) {
+          const span=document.createElement("span");
+          span.className="service-pill";
+          span.textContent=value;
+          td.append(span);
+        } else {
+          td.textContent=value;
+          if (i===4) td.className="amount";
+        }
+        tr.append(td);
+      });
+      const actions=document.createElement("td");
+      actions.className="actions";
+      const edit=document.createElement("button");
+      edit.className="action-btn";
+      edit.textContent="Edit";
+      edit.addEventListener("click",()=>openEdit(e.id));
+      const del=document.createElement("button");
+      del.className="action-btn";
+      del.textContent="Delete";
+      del.addEventListener("click",()=>deleteExpense(e.id));
+      actions.append(edit,del);
+      tr.append(actions);
+      tbody.append(tr);
+    });
+  }
+
+  function renderAnalytics(expenses,spent,percent) {
+    const summary=$("analyticsSummary");
+    const categories={};
+    expenses.forEach(e=>categories[e.category]=(categories[e.category]||0)+e.amount);
+    const lines=[
+      `Selected month: ${selectedMonth}`,
+      `Total recorded transactions: ${expenses.length}`,
+      `Total recorded expenditure: ${money(spent)}`,
+      `Configured monthly budget: ${money(state.budget)}`,
+      `Budget utilization: ${percent.toFixed(1)}%`,
+      `Average expense per entry: ${money(expenses.length ? spent/expenses.length : 0)}`,
+      `Highest individual expense: ${money(expenses.length ? Math.max(...expenses.map(e=>e.amount)) : 0)}`,
+      "Category totals: "+(Object.keys(categories).length ? Object.entries(categories).map(([k,v])=>`${k}: ${money(v)}`).join(" · ") : "No recorded expenses")
+    ];
+    summary.textContent=lines.join(" | ");
+  }
+
+  function renderAll() {
+    renderMonthOptions();
+    renderDashboard();
+  }
+
+  function openAdd() {
+    $("expenseForm").reset();
+    $("editId").value="";
+    $("modalTitle").textContent="Add Expense";
+    $("submitExpense").textContent="Save Expense";
+    $("expenseDate").value=new Date().toISOString().slice(0,10);
+    $("expenseModal").classList.add("show");
+    $("expenseDate").focus();
+  }
+
+  function openEdit(id) {
+    const e=state.expenses.find(x=>x.id===id);
+    if (!e) return;
+    $("expenseForm").reset();
+    $("editId").value=e.id;
+    $("expenseDate").value=e.date;
+    $("expenseAmount").value=e.amount;
+    $("expenseService").value=e.service;
+    $("expenseCategory").value=e.category;
+    $("expenseDescription").value=e.description||"";
+    $("modalTitle").textContent="Edit Expense";
+    $("submitExpense").textContent="Update Expense";
+    $("expenseModal").classList.add("show");
+  }
+
+  function closeModal() {
+    $("expenseModal").classList.remove("show");
+  }
+
+  $("expenseForm").addEventListener("submit",event=>{
+    event.preventDefault();
+    const date=$("expenseDate").value;
+    const amount=Number($("expenseAmount").value);
+    const service=$("expenseService").value;
+    const category=$("expenseCategory").value;
+    const description=$("expenseDescription").value.trim();
+    if (!date || !Number.isFinite(amount) || amount<=0) {
+      notify("Enter a valid date and an amount greater than zero.");
+      return;
+    }
+    const id=$("editId").value;
+    if (id) {
+      const index=state.expenses.findIndex(e=>e.id===id);
+      if (index>=0) state.expenses[index]={...state.expenses[index],date,amount,service,category,description};
+      notify("Expense updated successfully.");
+    } else {
+      state.expenses.push({id:crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+Math.random(),date,amount,service,category,description});
+      notify("Expense added successfully.");
+    }
+    selectedMonth=date.slice(0,7);
+    saveState();
+    closeModal();
+    renderAll();
+  });
+
+  function deleteExpense(id) {
+    if (!confirm("Delete this expense record? This cannot be undone.")) return;
+    state.expenses=state.expenses.filter(e=>e.id!==id);
+    saveState();
+    renderAll();
+    notify("Expense deleted.");
+  }
+
+  function saveSettings() {
+    const budget=Number($("quickBudget").value);
+    const currency=$("currency").value;
+    const threshold=Number($("threshold").value);
+    if (!Number.isFinite(budget)||budget<0) {
+      notify("Enter a valid budget amount.");
+      return;
+    }
+    state.budget=budget;
+    state.currency=currency;
+    state.threshold=threshold;
+    saveState();
+    renderAll();
+    notify("Budget settings saved.");
+  }
+
+  function exportCSV() {
+    const expenses=monthExpenses();
+    if (!expenses.length) {
+      notify("There are no expenses to export for this month.");
+      return;
+    }
+    const quote=value=>'"'+String(value??"").replace(/"/g,'""')+'"';
+    const rows=[
+      ["Date","Service","Category","Description","Amount","Currency"],
+      ...expenses.map(e=>[e.date,e.service,e.category,e.description,e.amount,state.currency])
+    ];
+    const csv=rows.map(row=>row.map(quote).join(",")).join("\r\n");
+    const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=`cloudguard-expenses-${selectedMonth}.csv`;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    notify("CSV report downloaded.");
+  }
+
+  function showSection(id) {
+    const target=$(id);
+    if (target) target.scrollIntoView({behavior:"smooth",block:"start"});
+    document.querySelectorAll(".nav-item[data-target]").forEach(btn=>{
+      btn.classList.toggle("active",btn.dataset.target===id);
+    });
+  }
+
+  $("monthFilter").addEventListener("change",e=>{
+    selectedMonth=e.target.value;
+    renderAll();
+  });
+  $("addBtn").addEventListener("click",openAdd);
+  $("addBtn2").addEventListener("click",openAdd);
+  $("cancelModal").addEventListener("click",closeModal);
+  $("expenseModal").addEventListener("click",e=>{
+    if(e.target===$("expenseModal")) closeModal();
+  });
+  $("saveSettings").addEventListener("click",saveSettings);
+  $("exportBtn").addEventListener("click",exportCSV);
+  $("exportNav").addEventListener("click",exportCSV);
+  $("budgetNav").addEventListener("click",()=>{
+    $("quickBudget").scrollIntoView({behavior:"smooth",block:"center"});
+    $("quickBudget").focus();
+  });
+  document.querySelectorAll(".nav-item[data-target]").forEach(btn=>{
+    btn.addEventListener("click",()=>showSection(btn.dataset.target));
+  });
+  document.addEventListener("keydown",e=>{
+    if(e.key==="Escape") closeModal();
+  });
+
+  renderAll();
+})();
+</script></body>
+</html>
